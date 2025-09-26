@@ -3,10 +3,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import compression from "compression";
+import type { CorsOptions } from "cors";
 
 import config from "@/config";
 import limiter from "@/lib/express_rate_limit";
-import type { CorsOptions } from "cors";
+import { connectToDatabase, disconnectFromDatabase } from "@/lib/mongoose";
 
 import v1Routes from "@/routes//v1";
 
@@ -41,6 +42,8 @@ app.use(limiter);
 
 (async () => {
   try {
+    await connectToDatabase();
+
     app.use("/api/v1", v1Routes);
 
     app.listen(config.PORT, () => {
@@ -54,3 +57,16 @@ app.use(limiter);
     }
   }
 })();
+
+const handleServerShutdown = async () => {
+  try {
+    await disconnectFromDatabase();
+    console.log("Server SHUTDOWN");
+    process.exit(0);
+  } catch (error) {
+    console.log("Error during server shutdown", error);
+  }
+};
+
+process.on("SIGTERM", handleServerShutdown);
+process.on("SIGINT", handleServerShutdown);
